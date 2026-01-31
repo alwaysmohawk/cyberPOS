@@ -8,7 +8,7 @@ from PIL import Image
 # ===== CONFIG =====
 PRINTER_IP = "192.168.88.154"
 PRINTER_PORT = 9100
-LOGO_BMP_PATH = "fastaf_nv.bmp"
+LOGO_BMP_PATH = "/root/cyberpos/fastaf_nv.bmp"
 
 # ===== CONNECTION =====
 p = Network(PRINTER_IP, PRINTER_PORT, profile="default")

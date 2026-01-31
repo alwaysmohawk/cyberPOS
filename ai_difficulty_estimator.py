@@ -4,7 +4,17 @@ Uses Claude API to intelligently estimate task difficulty and time
 """
 
 import os
+from pathlib import Path
 from anthropic import Anthropic
+
+# Load .env from project directory if key isn't already set
+if not os.environ.get("ANTHROPIC_API_KEY"):
+    _env_path = Path(__file__).resolve().parent / ".env"
+    if _env_path.exists():
+        for _line in _env_path.read_text().splitlines():
+            if _line.startswith("ANTHROPIC_API_KEY="):
+                os.environ["ANTHROPIC_API_KEY"] = _line.split("=", 1)[1].strip()
+                break
 
 # Configuration
 API_KEY_ENV = "ANTHROPIC_API_KEY"

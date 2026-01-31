@@ -58,10 +58,19 @@ journalctl -u cyberpos-morning.service -n 20  # check logs
 - Task completion server: `192.168.88.130:5000`
 - QR codes on receipts encode: `http://192.168.88.130:5000/complete/{tasklist_id}/{task_id}?name={task_name}`
 
+## Secrets — do not commit
+
+The following files contain secrets and are gitignored. They must never be staged or committed:
+
+- `.env` — `ANTHROPIC_API_KEY`. Created manually; `ai_difficulty_estimator.py` loads it at runtime.
+- `credentials.json` — Google OAuth client secret. Place manually from Google Cloud Console.
+- `token.pickle` — cached Google OAuth token. Regenerated automatically on first run after deletion.
+
+Before any `git add`, verify with `git status` that none of these appear. If one shows up as staged, remove it with `git reset HEAD <file>`. If a secret has already been pushed, rotate it immediately — the damage is done regardless of whether it's later removed from history.
+
 ## Gotchas
 
 - **Google scope changes:** If you add a scope to `SCOPES` in google_tasks_helper.py, delete `token.pickle` to force a fresh OAuth flow. The cached token won't have new scopes.
 - **Model pin:** Use `claude-3-haiku-20240307` only. The `-latest` suffix 404s.
 - **Shared modules:** Weather and printer logic live in `weather.py` and `printer.py`. All dispatch/receipt scripts import from these — edit once, it applies everywhere.
-- **credentials.json and token.pickle** are gitignored. `credentials.json` must be placed manually from Google Cloud Console. If auth fails mysteriously, delete `token.pickle` first.
 - **GitHub:** Credential store is configured at `~/.git-credentials`. Push with `git push` — no password prompt needed.
