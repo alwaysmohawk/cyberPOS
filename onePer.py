@@ -1,41 +1,12 @@
-from escpos.printer import Network
 from datetime import datetime
-from PIL import Image
 import random
 import urllib.parse
 from google_tasks_helper import get_tasks_with_ids
+from printer import p, raw, invert, MAJOR, MINOR, print_logo, diff_ascii, line_item, wrap_task
 
 # ===== CONFIG =====
-PRINTER_IP = "192.168.88.154"
-PRINTER_PORT = 9100
-LOGO_BMP_PATH = "fastaf_nv.bmp"
-
 RECEIPT_NO_START = 100  # Starting receipt number for individual tasks
 MAX_TASKS = 10  # Maximum number of tasks to fetch
-
-# ===== PRINTER =====
-p = Network(PRINTER_IP, PRINTER_PORT, profile="default")
-
-def raw(hexstr: str):
-    p._raw(bytes.fromhex(hexstr))
-
-def invert(on: bool):
-    # GS B n — invert print (safe if unsupported)
-    raw("1D 42 01" if on else "1D 42 00")
-
-MAJOR = "=" * 48
-MINOR = "-" * 48
-
-def diff_ascii(level: int) -> str:
-    # Difficulty indicator: [.....] [*.....] [**....] [***...] [****..] [*****.]
-    return "[" + ("*" * level).ljust(5, ".") + "]"
-
-def line_item(left: str, right: str) -> str:
-    right = right.rjust(6)
-    max_left = 48 - len(right) - 1
-    left = left[:max_left]
-    dots = "." * max(1, (48 - len(left) - len(right) - 1))
-    return f"{left} {dots}{right}\n"
 
 # ===== FOOTERS =====
 FOOTERS = [
@@ -77,22 +48,7 @@ def print_task_receipt(task_name: str, difficulty: int, receipt_no: int, task_nu
     raw("1B 40")  # ESC @ init
 
     # ===== HEADER =====
-    p.set(align="center")
-
-    invert(True)
-    p.text(" " * 48 + "\n")
-    invert(False)
-
-    logo = Image.open(LOGO_BMP_PATH)
-    if logo.mode not in ("1", "L"):
-        logo = logo.convert("1")
-    p.image(logo)
-
-    invert(True)
-    p.text(" " * 48 + "\n")
-    invert(False)
-
-    p.text("\n")
+    print_logo()
 
     # ===== TITLE =====
     raw("1D 21 11")  # 2x2
@@ -114,29 +70,10 @@ def print_task_receipt(task_name: str, difficulty: int, receipt_no: int, task_nu
     p.set(align="left")
     p.text("\n")
 
-    # Wrap long task names across multiple lines
-    max_width = 35  # Leave room for difficulty indicator
-    if len(task_name) > max_width:
-        words = task_name.split()
-        lines = []
-        current_line = ""
-        for word in words:
-            if len(current_line) + len(word) + 1 <= max_width:
-                current_line += (word + " ")
-            else:
-                if current_line:
-                    lines.append(current_line.strip())
-                current_line = word + " "
-        if current_line:
-            lines.append(current_line.strip())
-
-        # Print first line with difficulty indicator
-        p.text(line_item(f"[ ] {lines[0]}", diff_ascii(difficulty)))
-        # Print remaining lines without difficulty indicator
-        for line in lines[1:]:
-            p.text(f"    {line}\n")
-    else:
-        p.text(line_item(f"[ ] {task_name}", diff_ascii(difficulty)))
+    lines = wrap_task(task_name)
+    p.text(line_item(f"[ ] {lines[0]}", diff_ascii(difficulty)))
+    for line in lines[1:]:
+        p.text(f"    {line}\n")
 
     p.text("\n")
     p.text(MINOR + "\n")

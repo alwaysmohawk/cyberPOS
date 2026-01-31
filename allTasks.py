@@ -1,40 +1,11 @@
-from escpos.printer import Network
 from datetime import datetime
-from PIL import Image
 import random
 from google_tasks_helper import get_tasks_for_printer
+from printer import p, raw, invert, MAJOR, MINOR, print_logo, diff_ascii, line_item
 
 # ===== CONFIG =====
-PRINTER_IP = "192.168.88.154"
-PRINTER_PORT = 9100
-LOGO_BMP_PATH = "fastaf_nv.bmp"
-
 RECEIPT_NO = 21
 MAX_TASKS = 10  # Maximum number of tasks to print
-
-# ===== PRINTER =====
-p = Network(PRINTER_IP, PRINTER_PORT, profile="default")
-
-def raw(hexstr: str):
-    p._raw(bytes.fromhex(hexstr))
-
-def invert(on: bool):
-    # GS B n — invert print (safe if unsupported)
-    raw("1D 42 01" if on else "1D 42 00")
-
-MAJOR = "=" * 48
-MINOR = "-" * 48
-
-def diff_ascii(level: int) -> str:
-    # Difficulty indicator: [.....] [*.....] [**....] [***...] [****..] [*****.]
-    return "[" + ("*" * level).ljust(5, ".") + "]"
-
-def line_item(left: str, right: str) -> str:
-    right = right.rjust(6)
-    max_left = 48 - len(right) - 1
-    left = left[:max_left]
-    dots = "." * max(1, (48 - len(left) - len(right) - 1))
-    return f"{left} {dots}{right}\n"
 
 # ===== FOOTERS =====
 FOOTERS = [
@@ -47,13 +18,13 @@ FOOTERS = [
     "DONE FIRST. PERFECT LATER.",
 
     # --- Set B ---
-    "YOU’RE MAKING PROGRESS. KEEP GOING.",
+    "YOU'RE MAKING PROGRESS. KEEP GOING.",
     "ONE STEP IS STILL A STEP.",
     "SMALL WINS ADD UP.",
     "STEADY BEATS FAST.",
-    "KEEP GOING. YOU’RE ON TRACK.",
+    "KEEP GOING. YOU'RE ON TRACK.",
     "THANK YOU FOR TAKING THIS ON.",
-    "YOU’VE GOT THIS.",
+    "YOU'VE GOT THIS.",
 
     # --- Custom ---
     "YOUR EFFORTS ARE APPRECIATED.",
@@ -82,24 +53,8 @@ def main():
     p.open()
     raw("1B 40")  # ESC @ init
 
-    # ===== OPTION B HEADER =====
-    p.set(align="center")
-
-    invert(True)
-    p.text(" " * 48 + "\n")
-    invert(False)
-
-    logo = Image.open(LOGO_BMP_PATH)
-    if logo.mode not in ("1", "L"):
-        logo = logo.convert("1")
-    p.image(logo)
-
-    invert(True)
-    p.text(" " * 48 + "\n")
-    invert(False)
-
-    # Spacer line (intentional breathing room)
-    p.text("\n")
+    # ===== HEADER =====
+    print_logo()
 
     # ===== TITLE =====
     raw("1D 21 11")  # 2x2
@@ -145,4 +100,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

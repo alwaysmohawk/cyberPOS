@@ -12,12 +12,15 @@ from googleapiclient.discovery import build
 from ai_difficulty_estimator import estimate_task_difficulty_ai
 
 # If modifying these scopes, delete the file token.pickle
-SCOPES = ['https://www.googleapis.com/auth/tasks']
+SCOPES = [
+    'https://www.googleapis.com/auth/tasks',
+    'https://www.googleapis.com/auth/calendar.readonly',
+]
 
-def authenticate():
+def authenticate(api='tasks', version='v1'):
     """
-    Authenticates with Google Tasks API using OAuth 2.0
-    Returns a Google Tasks service object
+    Authenticates with Google APIs using OAuth 2.0
+    Returns a service object for the specified API
     """
     creds = None
     token_path = os.path.join(os.path.dirname(__file__), 'token.pickle')
@@ -45,7 +48,7 @@ def authenticate():
             pickle.dump(creds, token)
         print("Authentication successful!")
 
-    return build('tasks', 'v1', credentials=creds)
+    return build(api, version, credentials=creds)
 
 def get_tasks(service, max_results=10):
     """
@@ -192,6 +195,52 @@ def complete_task(task_id: str, tasklist_id: str) -> bool:
     except Exception as e:
         print(f"Error completing task: {e}")
         return False
+
+def get_calendar_events(max_events=10, days_offset=0):
+    """
+    Get calendar events from Google Calendar
+
+    Args:
+        max_events: Maximum number of events to return
+        days_offset: 0 = today, 1 = tomorrow, etc.
+
+    Returns:
+        List of tuples: (time_str, title, is_all_day)
+    """
+    from datetime import datetime as dt, timedelta
+
+    service = authenticate('calendar', 'v3')
+
+    now = dt.now().astimezone()
+    target_day = now + timedelta(days=days_offset)
+    start_of_day = target_day.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = target_day.replace(hour=23, minute=59, second=59, microsecond=0)
+
+    try:
+        results = service.events().list(
+            calendarId='primary',
+            timeMin=start_of_day.isoformat(),
+            timeMax=end_of_day.isoformat(),
+            singleEvents=True,
+            orderBy='startTime',
+            maxResults=max_events
+        ).execute()
+
+        events = results.get('items', [])
+        parsed = []
+        for event in events:
+            title = event.get('summary', 'Untitled Event')
+            start = event.get('start', {})
+            if 'dateTime' in start:
+                event_dt = dt.fromisoformat(start['dateTime'])
+                parsed.append((event_dt.strftime('%H:%M'), title, False))
+            elif 'date' in start:
+                parsed.append(('ALL DAY', title, True))
+
+        return parsed
+    except Exception as e:
+        print(f"Warning: Calendar fetch failed ({e})")
+        return []
 
 if __name__ == "__main__":
     # Test the authentication and task fetching
