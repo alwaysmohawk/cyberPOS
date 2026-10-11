@@ -1,0 +1,16 @@
+[Unit]
+Description=cyberPOS Nagger (phone push reminders)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/cyberpos
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /root/cyberpos/nagger.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

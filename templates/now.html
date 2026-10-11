@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if not energy %}
+<section class="card energy">
+  <div class="label">ENERGY CHECK // HOW'S THE TANK TODAY?</div>
+  <div class="row3">
+    <button class="btn" data-post="/api/energy" data-body='{"level":"low"}' data-then="reload">🪫 Low</button>
+    <button class="btn" data-post="/api/energy" data-body='{"level":"ok"}' data-then="reload">🔋 OK</button>
+    <button class="btn" data-post="/api/energy" data-body='{"level":"high"}' data-then="reload">⚡ High</button>
+  </div>
+  <div class="hint dim">Low is fine. You'll get something small.</div>
+</section>
+{% endif %}
+
+{% if timer %}
+<section class="card timer" data-ends="{{ timer.ends_at }}">
+  <div class="label">FOCUS TIMER // {{ timer.title }}</div>
+  <div class="countdown" id="countdown">--:--</div>
+  <div class="row3">
+    <button class="btn" data-post="/api/timer/extend" data-body='{"minutes":5}' data-then="reload">+5 min</button>
+    <button class="btn" data-post="/api/timer/extend" data-body='{"minutes":15}' data-then="reload">+15 min</button>
+    <button class="btn ghost" data-post="/api/timer/stop" data-then="reload">Stop</button>
+  </div>
+</section>
+{% endif %}
+
+<section class="card primary-card">
+  <div class="inverted">PRIMARY OBJECTIVE{% if pinned %} · PINNED{% endif %}</div>
+  {% if top %}
+    {% set path = "/api/task/" ~ top.list_id ~ "/" ~ top.id %}
+    {% if top.parent_title %}<div class="dim small">STEP OF: {{ top.parent_title }}</div>{% endif %}
+    <h1 class="objective">{{ top.title }}</h1>
+    {% if top.notes %}<div class="notes">{{ top.notes }}</div>{% endif %}
+    <div class="meta">
+      {% if top.due %}<span class="tag {{ 'warn' if due_label(top.due).endswith('OVERDUE') or due_label(top.due) == 'TODAY' }}">{{ due_label(top.due) }}</span>{% endif %}
+      <span class="tag p{{ top.priority }}">{{ PRIORITY_LABELS[top.priority] }}</span>
+      <span class="tag">{{ DIFFICULTY_TEXT[top.difficulty] }}</span>
+      {% if top.minutes %}<span class="tag">~{{ top.minutes }} MIN</span>{% endif %}
+      <span class="tag dim">{{ top.list_title }}</span>
+    </div>
+
+    <button class="btn done big" data-post="{{ path }}/done" data-then="celebrate">✓ DONE</button>
+
+    <div class="row2">
+      <details class="pop">
+        <summary class="btn">▶ Start</summary>
+        <div class="pop-body">
+          <div class="hint">Just start. You can stop after.</div>
+          <button class="btn" data-post="{{ path }}/timer" data-body='{"minutes":2}' data-then="reload">2 min, just begin</button>
+          <button class="btn" data-post="{{ path }}/timer" data-body='{"minutes":10}' data-then="reload">10 min</button>
+          <button class="btn" data-post="{{ path }}/timer" data-body='{"minutes":25}' data-then="reload">25 min</button>
+          {% if top.minutes and top.minutes not in (2, 10, 25) and top.minutes <= 180 %}
+          <button class="btn" data-post="{{ path }}/timer" data-body='{"minutes":{{ top.minutes }}}' data-then="reload">{{ top.minutes }} min (estimate)</button>
+          {% endif %}
+        </div>
+      </details>
+      <details class="pop">
+        <summary class="btn">↷ Not now</summary>
+        <div class="pop-body">
+          <button class="btn" data-post="{{ path }}/snooze" data-body='{"until":"1h"}' data-then="reload">In an hour</button>
+          <button class="btn" data-post="{{ path }}/snooze" data-body='{"until":"tonight"}' data-then="reload">This evening</button>
+          <button class="btn" data-post="{{ path }}/snooze" data-body='{"until":"tomorrow"}' data-then="reload">Tomorrow</button>
+        </div>
+      </details>
+    </div>
+    <div class="row2">
+      <button class="btn" data-post="{{ path }}/breakdown" data-busy="Breaking it down…" data-then="reload">✂ Too big?</button>
+      <button class="btn" data-post="{{ path }}/print" data-busy="Printing…" data-ok="Card printed. Scan it when done.">⎙ Print card</button>
+    </div>
+    {% if pinned %}<button class="btn ghost small-btn" data-post="/api/focus/clear" data-then="reload">Unpin. Let cyberPOS choose.</button>{% endif %}
+  {% elif not error %}
+    <h1 class="objective">Nothing queued.</h1>
+    <div class="hint">Inbox zero. Add something with the + button, or go do something nice for yourself.</div>
+  {% endif %}
+</section>
+
+{% if up_next %}
+<section class="card">
+  <div class="label">UP NEXT</div>
+  {% for t in up_next %}
+  <div class="line">
+    <span class="grow">{{ t.title }}</span>
+    {% if t.due %}<span class="tag small {{ 'warn' if due_label(t.due).endswith('OVERDUE') or due_label(t.due) == 'TODAY' }}">{{ due_label(t.due) }}</span>{% endif %}
+    <button class="btn tiny" data-post="/api/task/{{ t.list_id }}/{{ t.id }}/focus" data-then="reload" aria-label="Do this one instead">⇧</button>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="card status-grid">
+  <a href="/routines" class="stat"><div class="num">{{ habits_done }}/{{ habits_total }}</div><div class="dim small">{{ routine|upper }} ROUTINE</div></a>
+  <a href="/wins" class="stat"><div class="num">{{ wins_today }}</div><div class="dim small">WINS TODAY</div></a>
+  <a href="/wins" class="stat"><div class="num">{{ streak }}D</div><div class="dim small">STREAK</div></a>
+</section>
+
+{% if chores %}
+<section class="card">
+  <div class="label">HOME // OVERDUE</div>
+  {% for c in chores %}
+  <div class="line">
+    <span class="grow">{{ c.title }}</span>
+    <span class="tag small warn">{{ c.days_since }}D</span>
+    <button class="btn tiny" data-post="/api/chore/{{ c.id }}/done" data-then="celebrate" aria-label="Done">✓</button>
+  </div>
+  {% endfor %}
+  <a class="more" href="/chores">All chores →</a>
+</section>
+{% endif %}
+
+<div class="footer dim">{% if energy %}ENERGY: {{ energy|upper }} · {% endif %}ONE THING AT A TIME.</div>
+{% endblock %}

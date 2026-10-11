@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>{% block title %}cyberPOS{% endblock %}</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icon-192.png">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/console.css?v=1">
+</head>
+<body>
+<header class="top">
+  <img src="/static/rocket.svg" alt="" class="logo">
+  <div class="brand">cyberPOS <span class="dim">:: NODE 01</span></div>
+  <div class="clock" id="clock"></div>
+  <a href="/wins" class="icon-link {{ 'on' if nav == 'wins_page' }}" aria-label="Wins">★</a>
+  <a href="/settings" class="icon-link {{ 'on' if nav == 'settings_page' }}" aria-label="Settings">⚙</a>
+</header>
+
+{% if error %}<div class="banner warn">{{ error }} <a href="/settings">Settings →</a></div>{% endif %}
+
+<main>
+{% block content %}{% endblock %}
+</main>
+
+<button class="fab" id="capture-open" aria-label="Quick capture">+</button>
+
+<dialog id="capture">
+  <form method="dialog" class="capture-form" id="capture-form">
+    <div class="label">BRAIN DUMP // QUICK CAPTURE</div>
+    <textarea id="capture-text" rows="3" placeholder="e.g. call dentist tomorrow, it's urgent" autocomplete="off"></textarea>
+    <div class="row">
+      <button type="button" class="btn ghost" id="capture-cancel">Cancel</button>
+      <button type="submit" class="btn primary" id="capture-save">Save it</button>
+    </div>
+    <div class="hint dim">Get it out of your head. Sorting happens later.</div>
+  </form>
+</dialog>
+
+<nav class="bottom">
+  <a href="/" class="{{ 'on' if nav == 'now_page' }}"><span>◉</span>NOW</a>
+  <a href="/tasks" class="{{ 'on' if nav == 'tasks_page' }}"><span>☰</span>TASKS</a>
+  <a href="/chores" class="{{ 'on' if nav == 'chores_page' }}"><span>⌂</span>HOME</a>
+  <a href="/routines" class="{{ 'on' if nav == 'routines_page' }}"><span>↻</span>ROUTINE</a>
+  <a href="/print" class="{{ 'on' if nav == 'print_page' }}"><span>⎙</span>PRINT</a>
+</nav>
+
+<div id="toast" class="toast" role="status"></div>
+<script src="/static/app.js?v=1"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

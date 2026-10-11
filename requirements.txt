@@ -1,0 +1,9 @@
+# cyberPOS (install with: pip3 install -r requirements.txt)
+anthropic>=0.77
+flask>=3.1
+gunicorn>=23
+google-api-python-client
+google-auth-oauthlib
+python-escpos>=3.1
+pillow
+pywebpush>=2.0

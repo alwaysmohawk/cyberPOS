@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Home · cyberPOS{% endblock %}
+{% block content %}
+
+{% if unknown %}
+<section class="card">
+  <div class="label">SETUP // WHEN DID YOU LAST…? ({{ unknown|length }} LEFT)</div>
+  <div class="hint dim">One tap each. A rough guess is fine. No judgement.</div>
+  {% for c in unknown[:5] %}
+  <div class="setup-row">
+    <div>{{ c.title }} <span class="dim small">· every {{ c.interval_days }}d</span></div>
+    <div class="row4">
+      <button class="btn tiny-wide" data-post="/api/chore/{{ c.id }}/lastdone" data-body='{"when":"today"}' data-then="reload">Today</button>
+      <button class="btn tiny-wide" data-post="/api/chore/{{ c.id }}/lastdone" data-body='{"when":"week"}' data-then="reload">This week</button>
+      <button class="btn tiny-wide" data-post="/api/chore/{{ c.id }}/lastdone" data-body='{"when":"month"}' data-then="reload">This month</button>
+      <button class="btn tiny-wide" data-post="/api/chore/{{ c.id }}/lastdone" data-body='{"when":"ages"}' data-then="reload">Ages ago</button>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="label">OVERDUE // {{ overdue|length }}</div>
+  {% for c in overdue %}
+  <div class="chore {{ 'snoozed' if c.snoozed }}">
+    <div class="line">
+      <button class="check" data-post="/api/chore/{{ c.id }}/done" data-then="celebrate" aria-label="Done"></button>
+      <span class="grow">{{ c.title }}</span>
+      <span class="tag small warn">{{ c.days_since }}D / {{ c.interval_days }}D</span>
+      {% if not c.snoozed %}<button class="btn tiny" data-post="/api/chore/{{ c.id }}/snooze" data-body='{"days":1}' data-then="reload" aria-label="Snooze a day">↷</button>{% endif %}
+    </div>
+    <div class="bar"><div class="fill over" style="width:100%"></div></div>
+  </div>
+  {% else %}
+  <div class="hint">Nothing overdue. The apartment salutes you.</div>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <div class="label">COMING UP</div>
+  {% for c in upcoming %}
+  <details class="chore">
+    <summary>
+      <div class="line">
+        <button class="check" data-post="/api/chore/{{ c.id }}/done" data-then="celebrate" aria-label="Done"></button>
+        <span class="grow">{{ c.title }}</span>
+        <span class="tag small dim">{{ 'TODAY' if c.due_in == 0 else 'IN ' ~ c.due_in ~ 'D' }}</span>
+      </div>
+      <div class="bar"><div class="fill" style="width:{{ (c.ratio * 100)|round|int }}%"></div></div>
+    </summary>
+    <div class="task-body">
+      <div class="dim small">Last done {{ c.days_since }}d ago · every {{ c.interval_days }}d</div>
+      <form class="row-edit" data-chore-edit="{{ c.id }}">
+        <input name="title" value="{{ c.title }}">
+        <input name="interval_days" type="number" min="1" value="{{ c.interval_days }}" class="num-input">
+        <button class="btn tiny-wide" type="submit">Save</button>
+      </form>
+      <button class="btn ghost small-btn" data-post="/api/chore/{{ c.id }}/remove" data-then="reload">Remove chore</button>
+    </div>
+  </details>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <div class="label">ADD A CHORE</div>
+  <form class="row-edit" id="chore-add">
+    <input name="title" placeholder="e.g. Clean the balcony">
+    <input name="interval_days" type="number" min="1" value="7" class="num-input" aria-label="Every N days">
+    <button class="btn tiny-wide" type="submit">Add</button>
+  </form>
+  <div class="hint dim">Number = every N days.</div>
+</section>
+
+<button class="btn wide" data-post="/api/print/chores" data-busy="Printing…" data-ok="Chore list printed.">⎙ Print overdue chores</button>
+{% endblock %}

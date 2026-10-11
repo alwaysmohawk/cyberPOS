@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Task complete' if success else 'Error' }} · cyberPOS{% endblock %}
+{% block content %}
+<section class="card done-card {{ 'ok' if success else 'bad' }}">
+  {% if success %}
+  <div class="big-check">✓</div>
+  <h1>TASK COMPLETE</h1>
+  <div class="task-name">{{ task_name }}</div>
+  <div class="dim">THERMAL://SYNC OK{% if streak %} · STREAK {{ streak }}D{% endif %}</div>
+  {% else %}
+  <div class="big-check">✕</div>
+  <h1>SYNC FAILED</h1>
+  <div class="task-name">{{ task_name }}</div>
+  <div>Couldn't mark it complete in Google. It may already be done, or Google is disconnected.</div>
+  {% endif %}
+  <a class="btn wide" href="/">◉ What's next?</a>
+</section>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Tasks · cyberPOS{% endblock %}
+{% block content %}
+<div class="chips">
+  <a href="/tasks" class="chip {{ 'on' if not selected }}">ALL</a>
+  {% for lid, ltitle in lists %}
+  <a href="/tasks?list={{ lid }}" class="chip {{ 'on' if selected == lid }} {{ 'dim' if lid in hidden }}">{{ ltitle }}</a>
+  {% endfor %}
+</div>
+
+<section class="card">
+  <div class="label">QUEUE // {{ active|length }} OPEN · BEST FIRST</div>
+  {% for t in active %}
+  {% set path = "/api/task/" ~ t.list_id ~ "/" ~ t.id %}
+  <details class="task">
+    <summary>
+      <button class="check" data-post="{{ path }}/done" data-then="celebrate" aria-label="Mark done"></button>
+      <span class="grow">
+        {% if t.parent_title %}<span class="dim small">{{ t.parent_title }} › </span>{% endif %}{{ t.title }}
+      </span>
+      {% if t.due %}<span class="tag small {{ 'warn' if due_label(t.due).endswith('OVERDUE') or due_label(t.due) == 'TODAY' }}">{{ due_label(t.due) }}</span>{% endif %}
+      {% if t.priority == 1 %}<span class="tag small p1">!</span>{% endif %}
+    </summary>
+    <div class="task-body">
+      {% if t.notes %}<div class="notes">{{ t.notes }}</div>{% endif %}
+      <div class="meta">
+        <span class="tag">{{ DIFFICULTY_TEXT[t.difficulty] }}</span>
+        {% if t.minutes %}<span class="tag">~{{ t.minutes }} MIN</span>{% endif %}
+        <span class="tag dim">{{ t.list_title }}</span>
+      </div>
+      <div class="label small">PRIORITY</div>
+      <div class="row3">
+        {% for p in (1, 2, 3) %}
+        <button class="btn {{ 'on' if t.priority == p }}" data-post="{{ path }}/priority" data-body='{"priority":{{ p }}}' data-then="reload">{{ PRIORITY_LABELS[p] }}</button>
+        {% endfor %}
+      </div>
+      <div class="label small">DUE</div>
+      <div class="row2">
+        <input type="date" value="{{ t.due or '' }}" data-due-for="{{ path }}">
+        <button class="btn ghost" data-post="{{ path }}/due" data-body='{"due":""}' data-then="reload">Clear</button>
+      </div>
+      <div class="row2">
+        <button class="btn" data-post="{{ path }}/focus" data-then="go:/">◉ Do this now</button>
+        <button class="btn" data-post="{{ path }}/print" data-busy="Printing…" data-ok="Card printed.">⎙ Print card</button>
+      </div>
+      <div class="row2">
+        <button class="btn" data-post="{{ path }}/breakdown" data-busy="Breaking it down…" data-then="reload">✂ Break down</button>
+        <button class="btn" data-post="{{ path }}/snooze" data-body='{"until":"tomorrow"}' data-then="reload">↷ Tomorrow</button>
+      </div>
+    </div>
+  </details>
+  {% else %}
+  <div class="hint">{{ 'Nothing here.' if not error else '' }}</div>
+  {% endfor %}
+</section>
+
+{% if snoozed %}
+<details class="card">
+  <summary class="label">SNOOZED // {{ snoozed|length }}</summary>
+  {% for t in snoozed %}
+  <div class="line">
+    <span class="grow dim">{{ t.title }}</span>
+    <button class="btn tiny" data-post="/api/task/{{ t.list_id }}/{{ t.id }}/snooze" data-body='{"until":"clear"}' data-then="reload">Wake</button>
+  </div>
+  {% endfor %}
+</details>
+{% endif %}
+{% endblock %}

@@ -5,22 +5,14 @@ Evening briefing: primary objective, habits, weather, calendar, task queue
 
 from datetime import datetime
 import random
-from google_tasks_helper import get_tasks_with_ids, get_calendar_events
+from google_tasks_helper import get_calendar_events
+import picker
+import store
 from weather import get_weather
 from printer import p, raw, invert, MAJOR, MINOR, print_logo, diff_ascii, line_item, wrap_task
 
 # ===== CONFIG =====
 MAX_TASKS = 10
-
-# ===== HABITS =====
-HABITS = [
-    "Walk Neptune",
-    "Tidy the space",
-    "Review today's tasks",
-    "Lay out tomorrow's clothes",
-    "Prep lunch for tomorrow",
-    "Stretch for 10 min",
-]
 
 # ===== FOOTERS =====
 FOOTERS = [
@@ -39,21 +31,15 @@ def main():
 
     # --- Fetch all data ---
     print("Fetching tasks...")
-    tasks = get_tasks_with_ids(max_results=MAX_TASKS)
+    primary, remaining = picker.dispatch_queue(MAX_TASKS)
+    habits = store.habit_titles("evening")
+    chores = store.overdue_chores()[:3]
 
     print("Fetching calendar...")
     calendar = get_calendar_events()
 
     print("Fetching weather...")
     weather = get_weather()
-
-    # --- Primary objective = highest difficulty task ---
-    primary = None
-    remaining = []
-    if tasks:
-        sorted_tasks = sorted(tasks, key=lambda t: t[3], reverse=True)
-        primary = sorted_tasks[0]
-        remaining = sorted_tasks[1:]
 
     # ===== BEGIN PRINT =====
     p.open()
@@ -100,9 +86,17 @@ def main():
     # --- HABITS ---
     p.text("EVENING HABITS\n")
     p.text(MINOR + "\n")
-    for habit in HABITS:
+    for habit in habits:
         p.text(f"[ ] {habit}\n")
     p.text(MINOR + "\n")
+
+    # --- CHORES (most overdue first) ---
+    if chores:
+        p.text("HOME // OVERDUE\n")
+        p.text(MINOR + "\n")
+        for chore in chores:
+            p.text(line_item(f"[ ] {chore['title']}", f"{chore['days_since']}D"))
+        p.text(MINOR + "\n")
 
     # --- WEATHER ---
     p.text("WEATHER\n")

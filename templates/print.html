@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Print · cyberPOS{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="line">
+    <span class="dot {{ 'ok' if online else 'bad' }}"></span>
+    <span class="grow">PRINTER {{ 'ONLINE' if online else 'OFFLINE' }}</span>
+    <span class="dim small">192.168.88.131:9100</span>
+  </div>
+</section>
+
+<section class="card">
+  <div class="label">QUICK PRINTS</div>
+  <button class="btn wide" data-post="/api/print/focus" data-busy="Printing…" data-ok="Card printed. Scan it when done.">◉ My one thing (task card)</button>
+  <button class="btn wide" data-post="/api/print/top" data-busy="Printing…" data-ok="Top tasks printed.">☰ Top tasks list</button>
+  <button class="btn wide" data-post="/api/print/chores" data-busy="Printing…" data-ok="Chore list printed.">⌂ Overdue chores</button>
+  <button class="btn wide" data-post="/api/print/routine/{{ routine }}" data-busy="Printing…" data-ok="Routine printed.">↻ {{ routine|capitalize }} routine checklist</button>
+</section>
+
+<section class="card">
+  <div class="label">DISPATCHES</div>
+  {% for name, st in status.items() %}
+  <div class="line">
+    <span class="dot {{ 'ok' if st.result == 'success' else ('busy' if st.active == 'activating' else 'bad') }}"></span>
+    <span class="grow">{{ name|upper }}<span class="dim small"> · last {{ st.last or 'never' }}{% if st.result != 'success' %} · {{ st.result }}{% endif %}</span></span>
+    <button class="btn tiny-wide" data-post="/api/print/dispatch/{{ name }}" data-busy="Starting…" data-ok="{{ name|capitalize }} dispatch started.">Print</button>
+  </div>
+  {% endfor %}
+  <div class="hint dim">Scheduled: morning 07:30 · evening 17:00 · night 23:00</div>
+</section>
+
+<section class="card">
+  <div class="label">FREE NOTE</div>
+  <textarea id="note-text" rows="4" placeholder="Shopping list, a reminder for the fridge, anything."></textarea>
+  <button class="btn wide" id="note-print">⎙ Print note</button>
+</section>
+{% endblock %}

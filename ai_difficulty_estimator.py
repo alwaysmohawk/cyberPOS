@@ -20,6 +20,9 @@ if not os.environ.get("ANTHROPIC_API_KEY"):
 API_KEY_ENV = "ANTHROPIC_API_KEY"
 MODEL = "claude-haiku-5-5"
 
+# True if the most recent estimate came from the AI, False if it fell back to keywords
+last_was_ai = False
+
 def estimate_task_difficulty_ai(task_title: str, task_notes: str = "") -> tuple[int, int]:
     """
     Use Claude API to estimate task difficulty and time
@@ -31,6 +34,8 @@ def estimate_task_difficulty_ai(task_title: str, task_notes: str = "") -> tuple[
     Returns:
         tuple: (difficulty_level (0-5), estimated_minutes)
     """
+    global last_was_ai
+    last_was_ai = False
 
     # Check for API key
     api_key = os.environ.get(API_KEY_ENV)
@@ -86,6 +91,7 @@ Estimate realistic time in minutes based on the task complexity."""
             result = json.loads(response_text)
             difficulty = max(0, min(5, result.get("difficulty", 3)))  # Clamp to 0-5
             minutes = max(1, result.get("minutes", 15))  # At least 1 minute
+            last_was_ai = True
             return (difficulty, minutes)
         except json.JSONDecodeError:
             print(f"Warning: Could not parse AI response: {response_text}")

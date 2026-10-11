@@ -6,18 +6,9 @@ Pre-sleep checklist with tomorrow's weather and calendar
 from datetime import datetime
 import random
 from google_tasks_helper import get_calendar_events
+import store
 from weather import get_tomorrow_weather
 from printer import p, raw, invert, MAJOR, MINOR, print_logo
-
-# ===== HABITS =====
-HABITS = [
-    "Brush teeth",
-    "Wash face",
-    "Set tomorrow's alarm",
-    "Write 3 gratitudes",
-    "Drink water",
-    "No screens — wind down",
-]
 
 # ===== FOOTERS =====
 FOOTERS = [
@@ -71,7 +62,7 @@ def main():
     p.set(align="left")
     p.text("\n")
 
-    for habit in HABITS:
+    for habit in store.habit_titles("night"):
         p.text(f"[ ] {habit}\n")
 
     p.text("\n")

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Routines · cyberPOS{% endblock %}
+{% block content %}
+{% for name, items in routines.items() %}
+<details class="card" {{ 'open' if name == current }}>
+  <summary class="label">{{ name|upper }} ROUTINE // {{ items|selectattr('id', 'in', checked)|list|length }}/{{ items|length }}</summary>
+  {% for h in items %}
+  <button class="habit {{ 'on' if h.id in checked }}" data-post="/api/habit/{{ h.id }}/toggle" data-then="toggle">
+    <span class="box">{{ '✓' if h.id in checked else '' }}</span>{{ h.title }}
+  </button>
+  {% endfor %}
+  <details class="edit">
+    <summary class="dim small">Edit {{ name }} routine</summary>
+    {% for h in items %}
+    <div class="line">
+      <span class="grow">{{ h.title }}</span>
+      <button class="btn tiny" data-post="/api/habit/{{ h.id }}/remove" data-then="reload" aria-label="Remove">✕</button>
+    </div>
+    {% endfor %}
+    <form class="row-edit" data-habit-add="{{ name }}">
+      <input name="title" placeholder="Add a habit">
+      <button class="btn tiny-wide" type="submit">Add</button>
+    </form>
+  </details>
+  <button class="btn ghost small-btn" data-post="/api/print/routine/{{ name }}" data-busy="Printing…" data-ok="Routine printed.">⎙ Print checklist</button>
+</details>
+{% endfor %}
+<div class="footer dim">Checks reset every day. These lists also print on the dispatch receipts.</div>
+{% endblock %}

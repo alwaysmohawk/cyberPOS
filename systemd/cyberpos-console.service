@@ -1,0 +1,15 @@
+[Unit]
+Description=cyberPOS Console (web app + QR completion, port 5000)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/cyberpos
+ExecStart=/usr/bin/python3 -m gunicorn --workers 1 --threads 8 --bind 0.0.0.0:5000 --timeout 120 console:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

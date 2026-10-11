@@ -107,14 +107,37 @@ def estimate_difficulty(task):
     Returns:
         int: Difficulty level (1-3)
     """
+    return estimate_difficulty_and_minutes(task)[0]
+
+def estimate_difficulty_and_minutes(task):
+    """
+    (difficulty, minutes) for a task, cached in the local store by task id + title
+    so each task is only sent to the AI once (and again only if its title changes)
+    """
+    import store
+
+    task_id = task.get('id', '')
     title = task.get('title', '')
     notes = task.get('notes', '')
 
-    # Use AI to estimate difficulty and time
+    try:
+        store.init()
+        cached = store.cached_difficulty(task_id, title)
+        if cached:
+            return cached
+    except Exception as e:
+        print(f"Warning: difficulty cache unavailable ({e})")
+
     difficulty, minutes = estimate_task_difficulty_ai(title, notes)
 
-    # For now, we only return difficulty (minutes could be used later)
-    return difficulty
+    if task_id:
+        try:
+            import ai_difficulty_estimator
+            store.upsert_task_meta(task_id, title=title, difficulty=difficulty, minutes=minutes,
+                                   ai_scored=int(ai_difficulty_estimator.last_was_ai))
+        except Exception as e:
+            print(f"Warning: could not cache difficulty ({e})")
+    return difficulty, minutes
 
 def get_tasks_for_printer(max_results=10):
     """
@@ -195,6 +218,154 @@ def complete_task(task_id: str, tasklist_id: str) -> bool:
     except Exception as e:
         print(f"Error completing task: {e}")
         return False
+
+def _due_date(task):
+    """Google Tasks due dates are date-only (RFC3339 at midnight UTC)"""
+    due = task.get('due')
+    return due[:10] if due else None
+
+def list_all_tasks():
+    """
+    Every open task across every task list
+
+    Returns:
+        List of dicts: id, list_id, list_title, title, notes, due (YYYY-MM-DD or None),
+        parent, position, updated
+    """
+    service = authenticate()
+    out = []
+    lists = service.tasklists().list(maxResults=100).execute().get('items', [])
+    for tl in lists:
+        page_token = None
+        while True:
+            results = service.tasks().list(
+                tasklist=tl['id'], maxResults=100, showCompleted=False,
+                showHidden=False, pageToken=page_token
+            ).execute()
+            for task in results.get('items', []):
+                if not task.get('title', '').strip():
+                    continue
+                out.append({
+                    'id': task['id'],
+                    'list_id': tl['id'],
+                    'list_title': tl.get('title', ''),
+                    'title': task.get('title', ''),
+                    'notes': task.get('notes', ''),
+                    'due': _due_date(task),
+                    'parent': task.get('parent'),
+                    'position': task.get('position', ''),
+                    'updated': task.get('updated', ''),
+                })
+            page_token = results.get('nextPageToken')
+            if not page_token:
+                break
+    return out
+
+def get_task_lists():
+    """[(id, title), ...] in Google's order; the first one is the default list"""
+    service = authenticate()
+    lists = service.tasklists().list(maxResults=100).execute().get('items', [])
+    return [(tl['id'], tl.get('title', '')) for tl in lists]
+
+def create_task(title, tasklist_id=None, notes=None, due=None, parent=None, previous=None):
+    """
+    Create a task (optionally as a subtask of `parent`, placed after `previous`)
+
+    Args:
+        due: 'YYYY-MM-DD' or None
+
+    Returns:
+        The created task resource (dict)
+    """
+    service = authenticate()
+    if not tasklist_id:
+        tasklist_id = service.tasklists().list(maxResults=1).execute()['items'][0]['id']
+    body = {'title': title}
+    if notes:
+        body['notes'] = notes
+    if due:
+        body['due'] = f"{due}T00:00:00.000Z"
+    kwargs = {}
+    if parent:
+        kwargs['parent'] = parent
+    if previous:
+        kwargs['previous'] = previous
+    task = service.tasks().insert(tasklist=tasklist_id, body=body, **kwargs).execute()
+    task['list_id'] = tasklist_id
+    return task
+
+def update_task(task_id, tasklist_id, **fields):
+    """Patch title / notes / due ('YYYY-MM-DD' or '' to clear)"""
+    service = authenticate()
+    body = {}
+    for key in ('title', 'notes'):
+        if key in fields:
+            body[key] = fields[key]
+    if 'due' in fields:
+        body['due'] = f"{fields['due']}T00:00:00.000Z" if fields['due'] else None
+    return service.tasks().patch(tasklist=tasklist_id, task=task_id, body=body).execute()
+
+def delete_task(task_id, tasklist_id):
+    service = authenticate()
+    service.tasks().delete(tasklist=tasklist_id, task=task_id).execute()
+
+def token_status():
+    """
+    ('ok', detail) if the saved Google token works (refreshing it if needed),
+    otherwise ('error', reason). Never starts an interactive OAuth flow.
+    """
+    token_path = os.path.join(os.path.dirname(__file__), 'token.pickle')
+    if not os.path.exists(token_path):
+        return 'error', 'No token saved. Reconnect Google.'
+    try:
+        with open(token_path, 'rb') as token:
+            creds = pickle.load(token)
+        if not creds.valid:
+            if not creds.refresh_token:
+                return 'error', 'Token has no refresh token. Reconnect Google.'
+            creds.refresh(Request())
+            with open(token_path, 'wb') as token:
+                pickle.dump(creds, token)
+        build('tasks', 'v1', credentials=creds).tasklists().list(maxResults=1).execute()
+        return 'ok', 'Connected'
+    except Exception as e:
+        return 'error', f'{type(e).__name__}: {e}'
+
+# ===== RECONNECT (phone-friendly OAuth) =====
+# The OAuth client is a "Desktop app", so Google only redirects to localhost. From a phone
+# that page fails to load, but its URL carries the code: the user pastes it back to finish.
+REAUTH_REDIRECT = 'http://localhost:8765/'
+_pending_flows = {}
+
+def reauth_start():
+    """Returns the Google consent URL to open"""
+    flow = InstalledAppFlow.from_client_secrets_file(
+        os.path.join(os.path.dirname(__file__), 'credentials.json'), SCOPES,
+        redirect_uri=REAUTH_REDIRECT)
+    url, state = flow.authorization_url(access_type='offline', prompt='consent')
+    _pending_flows.clear()
+    _pending_flows[state] = flow
+    return url
+
+def reauth_finish(redirected_url):
+    """Exchange the pasted localhost URL for a new token. Returns (ok, message)."""
+    from urllib.parse import urlparse, parse_qs
+    os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')  # loopback redirect is plain http
+    params = parse_qs(urlparse(redirected_url.strip()).query)
+    state = (params.get('state') or [''])[0]
+    flow = _pending_flows.get(state)
+    if not flow:
+        return False, 'That link does not match the current reconnect attempt. Start again.'
+    if 'error' in params:
+        return False, f"Google said: {params['error'][0]}"
+    try:
+        flow.fetch_token(authorization_response=redirected_url.strip())
+    except Exception as e:
+        return False, f'{type(e).__name__}: {e}'
+    with open(os.path.join(os.path.dirname(__file__), 'token.pickle'), 'wb') as token:
+        pickle.dump(flow.credentials, token)
+    _pending_flows.clear()
+    return True, 'Google reconnected.'
 
 def get_calendar_events(max_events=10, days_offset=0):
     """

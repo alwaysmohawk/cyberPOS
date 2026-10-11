@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Wins · cyberPOS{% endblock %}
+{% block content %}
+<section class="card status-grid">
+  <div class="stat"><div class="num">{{ today_events|length }}</div><div class="dim small">TODAY</div></div>
+  <div class="stat"><div class="num">{{ week_count }}</div><div class="dim small">LAST 7 DAYS</div></div>
+  <div class="stat"><div class="num">{{ streak }}D</div><div class="dim small">STREAK</div></div>
+</section>
+
+<section class="card">
+  <div class="label">LAST 14 DAYS</div>
+  <div class="spark">
+    {% for day, n in by_day.items() %}
+    <div class="spark-col" title="{{ day }}: {{ n }}">
+      <div class="spark-bar" style="height:{{ (n / max_day * 100)|round|int if n else 0 }}%"></div>
+      <div class="spark-n">{{ n if n else '·' }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <div class="label">DONE TODAY</div>
+  {% for e in today_events %}
+  <div class="line"><span class="dim small">{{ e.ts[11:16] }}</span><span class="grow">{{ e.title }}</span><span class="tag small">{{ e.kind|upper }}</span></div>
+  {% else %}
+  <div class="hint">Nothing logged yet today. One small thing counts.</div>
+  {% endfor %}
+</section>
+<div class="footer dim">YOU SHOWED UP. THAT COUNTS.</div>
+{% endblock %}

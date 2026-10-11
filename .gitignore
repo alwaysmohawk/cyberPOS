@@ -3,3 +3,6 @@ __pycache__/
 token.pickle
 credentials.json
 .env
+cyberpos.db
+cyberpos.db-*
+vapid_private.pem

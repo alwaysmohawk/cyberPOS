@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Settings · cyberPOS{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="label">NAGS // PHONE NOTIFICATIONS</div>
+  <label class="toggle big-toggle">
+    <input type="checkbox" data-setting="nag_enabled" {{ 'checked' if s.nag_enabled == '1' }}>
+    <span>Nag me (master switch)</span>
+  </label>
+  <div class="hint dim">Off = total silence. Flip it back whenever.</div>
+
+  <div class="sub {{ 'disabled' if s.nag_enabled != '1' }}">
+    <label class="toggle"><input type="checkbox" data-setting="nag_focus" {{ 'checked' if s.nag_focus == '1' }}>
+      <span>"Your one thing" reminders</span></label>
+    <div class="row-edit">
+      <span class="dim small grow">…if nothing's been started or done for</span>
+      <select data-setting-value="nag_focus_every_min">
+        {% for m in (45, 60, 90, 120, 180, 240) %}
+        <option value="{{ m }}" {{ 'selected' if s.nag_focus_every_min == m|string }}>{{ m }} min</option>
+        {% endfor %}
+      </select>
+    </div>
+    <label class="toggle"><input type="checkbox" data-setting="nag_timer" {{ 'checked' if s.nag_timer == '1' }}>
+      <span>Focus timer finished</span></label>
+    <label class="toggle"><input type="checkbox" data-setting="nag_chores" {{ 'checked' if s.nag_chores == '1' }}>
+      <span>Daily overdue-chores reminder at</span></label>
+    <div class="row-edit"><span class="grow"></span><input type="time" value="{{ s.nag_chores_at }}" data-setting-value="nag_chores_at"></div>
+    <div class="label small">QUIET HOURS (no nags except timers you started)</div>
+    <div class="row-edit">
+      <input type="time" value="{{ s.quiet_start }}" data-setting-value="quiet_start">
+      <span class="dim">→</span>
+      <input type="time" value="{{ s.quiet_end }}" data-setting-value="quiet_end">
+    </div>
+  </div>
+  <label class="toggle"><input type="checkbox" data-setting="nag_alerts" {{ 'checked' if s.nag_alerts == '1' }}>
+    <span>System alerts (failed receipts, Google disconnected)</span></label>
+
+  <div class="label small">THIS PHONE</div>
+  <div class="hint dim" id="push-state">{{ subs }} device(s) subscribed.</div>
+  <div class="row2">
+    <button class="btn" id="push-enable" data-key="{{ vapid_key }}">Enable on this phone</button>
+    <button class="btn" data-post="/api/push/test" data-ok="Test sent. Check your phone.">Send test</button>
+  </div>
+  <div class="hint dim">Needs the https address (cyberpos.fastaf.ca). On Android: Chrome menu → Add to Home screen, open it from there, then tap Enable.</div>
+</section>
+
+<section class="card">
+  <div class="label">GOOGLE</div>
+  <div class="line">
+    <span class="dot {{ 'ok' if google[0] == 'ok' else 'bad' }}"></span>
+    <span class="grow">{{ google[1] }}</span>
+  </div>
+  <details class="edit" {{ 'open' if google[0] != 'ok' }}>
+    <summary class="dim small">Reconnect Google</summary>
+    <ol class="steps">
+      <li><button class="btn tiny-wide" id="reauth-start">Open Google sign-in</button></li>
+      <li>Approve it (Advanced → Go to cyberPOS if it warns you).</li>
+      <li>You'll land on a page that won't load (<span class="dim">localhost:8765…</span>). That's expected. Copy that whole address and paste it here:</li>
+    </ol>
+    <input id="reauth-url" placeholder="http://localhost:8765/?state=…&code=…">
+    <button class="btn wide" id="reauth-finish">Finish reconnect</button>
+  </details>
+</section>
+
+<section class="card">
+  <div class="label">TASK LISTS USED FOR PICKING</div>
+  <div class="hint dim">Untick lists that should never be your "one thing" (groceries, someday, etc.).</div>
+  {% for lid, ltitle in lists %}
+  <label class="toggle"><input type="checkbox" data-list-toggle="{{ lid }}" {{ 'checked' if lid not in hidden }}><span>{{ ltitle }}</span></label>
+  {% endfor %}
+</section>
+
+<div class="footer dim">cyberPOS console · fastAF industries :: NODE 01</div>
+{% endblock %}
