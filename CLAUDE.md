@@ -27,7 +27,7 @@ Scripts that fetch tasks (morning, evening, onePer, allTasks) need `ANTHROPIC_AP
 - `complete_task(task_id, tasklist_id)` → bool (called by task_server on QR scan)
 - `estimate_difficulty(task)` → delegates to ai_difficulty_estimator
 
-**ai_difficulty_estimator.py** scores tasks 0–5 via Claude Haiku. Falls back to keyword heuristics if no API key. Model is pinned to `claude-3-haiku-20240307` — do not use `-latest`, it 404s with this key.
+**ai_difficulty_estimator.py** scores tasks 0–5 via Claude Haiku. Falls back to keyword heuristics if no API key. Model is pinned to `claude-haiku-5-5` (claude-3-haiku-20240307 was retired and 404s; it silently fell back to heuristics until 2026-10-10). Falls back to heuristics on any API error too, so check logs for "AI estimation failed".
 
 **weather.py** — shared weather fetching. `get_weather()` returns current conditions (used by morning/evening); `get_tomorrow_weather()` returns tomorrow's daily forecast via Open-Meteo's `daily` endpoint (used by nighttime). Both share `WEATHER_CODES` and `wind_dir()`.
 
@@ -54,7 +54,7 @@ journalctl -u cyberpos-morning.service -n 20  # check logs
 
 ## Network
 
-- Printer: `192.168.88.154:9100` (ESC/POS thermal, 48-column width)
+- Printer: `192.168.88.131:9100` (DHCP reservation in OPNsense, moved from .154 on 2026-10-10) (ESC/POS thermal, 48-column width)
 - Task completion server: `192.168.88.130:5000`
 - QR codes on receipts encode: `http://192.168.88.130:5000/complete/{tasklist_id}/{task_id}?name={task_name}`
 
@@ -71,6 +71,6 @@ Before any `git add`, verify with `git status` that none of these appear. If one
 ## Gotchas
 
 - **Google scope changes:** If you add a scope to `SCOPES` in google_tasks_helper.py, delete `token.pickle` to force a fresh OAuth flow. The cached token won't have new scopes.
-- **Model pin:** Use `claude-3-haiku-20240307` only. The `-latest` suffix 404s.
+- **Model pin:** `claude-haiku-5-5`. If scoring looks keyword-ish, run `python3 ai_difficulty_estimator.py` and look for "AI estimation failed" (e.g. a retired model).
 - **Shared modules:** Weather and printer logic live in `weather.py` and `printer.py`. All dispatch/receipt scripts import from these — edit once, it applies everywhere.
 - **GitHub:** Credential store is configured at `~/.git-credentials`. Push with `git push` — no password prompt needed.

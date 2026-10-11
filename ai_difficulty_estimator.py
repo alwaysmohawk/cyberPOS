@@ -18,7 +18,7 @@ if not os.environ.get("ANTHROPIC_API_KEY"):
 
 # Configuration
 API_KEY_ENV = "ANTHROPIC_API_KEY"
-MODEL = "claude-3-haiku-20240307"
+MODEL = "claude-haiku-5-5"
 
 def estimate_task_difficulty_ai(task_title: str, task_notes: str = "") -> tuple[int, int]:
     """
@@ -67,14 +67,18 @@ Estimate realistic time in minutes based on the task complexity."""
         # Call Claude API
         message = client.messages.create(
             model=MODEL,
-            max_tokens=100,
+            max_tokens=256,
+            # Short JSON classification: thinking adds latency/cost and can eat max_tokens
+            # before any text is produced (Haiku 5.5 thinks by default).
+            thinking={"type": "disabled"},
             messages=[
                 {"role": "user", "content": prompt}
             ]
         )
 
         # Parse the response
-        response_text = message.content[0].text.strip()
+        # Take the text block; don't assume it's content[0] (thinking blocks may come first)
+        response_text = next((b.text for b in message.content if b.type == "text"), "").strip()
 
         # Parse JSON response
         import json

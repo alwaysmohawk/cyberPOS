@@ -6,7 +6,7 @@ from escpos.printer import Network
 from PIL import Image
 
 # ===== CONFIG =====
-PRINTER_IP = "192.168.88.154"
+PRINTER_IP = "192.168.88.131"
 PRINTER_PORT = 9100
 LOGO_BMP_PATH = "/root/cyberpos/fastaf_nv.bmp"
 
