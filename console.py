@@ -148,7 +148,7 @@ def now_page():
         timer=store.get_timer(), chores=store.overdue_chores()[:3], routine=routine,
         habits_done=sum(1 for h in habits if h["id"] in checked), habits_total=len(habits),
         wins_today=len(wins_today), streak=store.streak(),
-        pinned=store.get_setting("focus_task_id") == (top["id"] if top else None),
+        pinned=bool(top) and store.get_setting("focus_task_id") == top["id"],
     )
 
 

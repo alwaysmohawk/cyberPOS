@@ -105,6 +105,9 @@ input, textarea, select { width: 100%; font: inherit; color: var(--fg); backgrou
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--fg); }
 input[type="date"], input[type="time"] { color-scheme: dark; }
 .row-edit { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.row-edit > input { flex: 1; min-width: 0; }
+.row-edit > select { width: auto; flex: none; }
+.row-edit > .grow { min-width: 8em; }
 .num-input { width: 80px; flex: none; }
 
 /* ===== chores ===== */

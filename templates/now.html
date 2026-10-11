@@ -69,7 +69,10 @@
       <button class="btn" data-post="{{ path }}/print" data-busy="Printing…" data-ok="Card printed. Scan it when done.">⎙ Print card</button>
     </div>
     {% if pinned %}<button class="btn ghost small-btn" data-post="/api/focus/clear" data-then="reload">Unpin. Let cyberPOS choose.</button>{% endif %}
-  {% elif not error %}
+  {% elif error %}
+    <h1 class="objective">Tasks are offline.</h1>
+    <div class="hint">Google isn't answering. Routines, chores and printing still work.</div>
+  {% else %}
     <h1 class="objective">Nothing queued.</h1>
     <div class="hint">Inbox zero. Add something with the + button, or go do something nice for yourself.</div>
   {% endif %}
